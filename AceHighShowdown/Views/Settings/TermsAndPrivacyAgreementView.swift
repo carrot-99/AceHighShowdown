@@ -1,6 +1,7 @@
 //  TermsAndPrivacyAgreementView.swift
 
 import SwiftUI
+import AppTrackingTransparency
 
 struct TermsAndPrivacyAgreementView: View {
     @Binding var isShowingTerms: Bool
@@ -48,9 +49,33 @@ struct TermsAndPrivacyAgreementView: View {
                 UserDefaults.standard.set(true, forKey: "hasAgreedToTerms")
                 self.hasAgreedToTerms = true
                 self.isShowingTerms = false
+                requestTrackingPermission()
             }
             .frame(maxWidth: .infinity)
         }
         .padding()
     }
+    
+    func requestTrackingPermission() {
+        ATTrackingManager.requestTrackingAuthorization { status in
+            switch status {
+            case .authorized:
+                // トラッキング許可された
+                print("Tracking authorized by the user")
+            case .denied:
+                // トラッキング拒否された
+                print("Tracking denied by the user")
+            case .notDetermined:
+                // トラッキング許可がまだ求められていない
+                print("Tracking permission not determined")
+            case .restricted:
+                // トラッキングが制限されている
+                print("Tracking restricted")
+            @unknown default:
+                // 新しい未知の状態が将来追加されるかもしれない
+                print("Unknown status")
+            }
+        }
+    }
+
 }

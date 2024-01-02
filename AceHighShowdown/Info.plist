@@ -207,5 +207,7 @@
 	<string>ca-app-pub-1407897196194439/5199399909</string>
 	<key>AdBannerUnitID</key>
 	<string>ca-app-pub-1407897196194439/2771998376</string>
+    <key>NSUserTrackingUsageDescription</key>
+    <string>このアプリがあなたに関する情報を収集して他のアプリやウェブサイトと共有する理由を記述します。</string>
 </dict>
 </plist>
