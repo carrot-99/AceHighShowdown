@@ -1,81 +1,76 @@
 //  TermsAndPrivacyAgreementView.swift
 
 import SwiftUI
-import AppTrackingTransparency
 
 struct TermsAndPrivacyAgreementView: View {
-    @Binding var isShowingTerms: Bool
-    @Binding var hasAgreedToTerms: Bool
+    @AppStorage(StorageKeys.hasAgreedToTerms) private var hasAgreedToTerms = false
     @State private var isShowingTermsView = false
     @State private var isShowingPrivacyPolicyView = false
 
     var body: some View {
-        VStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    Spacer().frame(height: 20)
-                    Text("本アプリでは、お客様の体験を向上させるために広告を表示します。詳細については、以下の利用規約とプライバシーポリシーをご確認ください。")
-                        .font(.subheadline)
-                        .padding(.horizontal)
+        VStack(spacing: 24) {
+            Spacer()
 
-                    HStack {
-                        Spacer()
-                        
-                        Button("利用規約") {
-                            isShowingTermsView = true
-                        }
-                        .sheet(isPresented: $isShowingTermsView) {
-                            TermsView()
-                        }
+            Image(systemName: "suit.spade.fill")
+                .font(.system(size: 56))
+                .foregroundColor(.accentColor)
 
-                        Spacer()
+            Text("ACE HIGH SHOWDOWN")
+                .font(.title.bold())
 
-                        Button("プライバシーポリシー") {
-                            isShowingPrivacyPolicyView = true
+            Text("本アプリでは、お客様の体験を向上させるために広告を表示します。詳細については、以下の利用規約とプライバシーポリシーをご確認ください。")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: 12) {
+                documentButton("利用規約", systemImage: "doc.text") { isShowingTermsView = true }
+                documentButton("プライバシーポリシー", systemImage: "hand.raised") { isShowingPrivacyPolicyView = true }
+            }
+
+            Spacer()
+
+            Button("NEXT") {
+                hasAgreedToTerms = true
+            }
+            .buttonStyle(.primaryGame)
+        }
+        .padding(24)
+        .frame(maxWidth: 520)
+        .sheet(isPresented: $isShowingTermsView) {
+            documentSheet("利用規約") { TermsView() }
+        }
+        .sheet(isPresented: $isShowingPrivacyPolicyView) {
+            documentSheet("プライバシーポリシー") { PrivacyPolicyView() }
+        }
+    }
+
+    private func documentButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Label(title, systemImage: systemImage)
+                Spacer()
+                Image(systemName: "chevron.right").foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func documentSheet<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        NavigationView {
+            content()
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("閉じる") {
+                            isShowingTermsView = false
+                            isShowingPrivacyPolicyView = false
                         }
-                        .sheet(isPresented: $isShowingPrivacyPolicyView) {
-                            PrivacyPolicyView()
-                        }
-                        
-                        Spacer()
                     }
-                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
-            }
-
-            // 同意するボタン
-            Button("同意する") {
-                UserDefaults.standard.set(true, forKey: "hasAgreedToTerms")
-                self.hasAgreedToTerms = true
-                self.isShowingTerms = false
-                requestTrackingPermission()
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .padding()
-    }
-    
-    func requestTrackingPermission() {
-        ATTrackingManager.requestTrackingAuthorization { status in
-            switch status {
-            case .authorized:
-                // トラッキング許可された
-                print("Tracking authorized by the user")
-            case .denied:
-                // トラッキング拒否された
-                print("Tracking denied by the user")
-            case .notDetermined:
-                // トラッキング許可がまだ求められていない
-                print("Tracking permission not determined")
-            case .restricted:
-                // トラッキングが制限されている
-                print("Tracking restricted")
-            @unknown default:
-                // 新しい未知の状態が将来追加されるかもしれない
-                print("Unknown status")
-            }
         }
     }
-
 }

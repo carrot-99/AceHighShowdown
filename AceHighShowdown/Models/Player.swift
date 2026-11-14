@@ -2,31 +2,19 @@
 
 import Foundation
 
-class Player: ObservableObject {
-    var hand: [Card]
-    var name: String
-    var cardsWon: Int = 0
+struct Player {
+    let name: String
+    var hand: [Card] = []
+    var score: Int = 0
 
-    init(name: String) {
-        self.name = name
-        self.hand = []
+    /// 1ラウンドで勝利した際に獲得するポイント（場の2枚分）
+    static let pointsPerWin = 2
+
+    mutating func playCard() -> Card? {
+        hand.isEmpty ? nil : hand.removeFirst()
     }
 
-    func playCard() -> Card? {
-        if hand.isEmpty {
-            return nil
-        } else {
-            return hand.removeFirst()
-        }
-    }
-    
-    func winCards() {
-        self.cardsWon += 2
-    }
-    
-    // プレイヤーの手札と勝ったカードの数をリセットする
-    func reset() {
-        hand.removeAll()
-        cardsWon = 0
+    mutating func winRound() {
+        score += Self.pointsPerWin
     }
 }

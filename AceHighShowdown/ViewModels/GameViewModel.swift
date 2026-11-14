@@ -1,324 +1,162 @@
 //  GameViewModel.swift
 
 import Foundation
-import SwiftUI
-import GoogleMobileAds
 
-class GameViewModel: ObservableObject {
-    @Published private(set) var deck = Deck()
-    @Published private(set) var currentPlayer: Player {
-        didSet {
-            updateCardsRemaining()
+@MainActor
+final class GameViewModel: ObservableObject {
+    enum Phase: Equatable {
+        /// ゲーム開始前
+        case notStarted
+        /// ユーザーが HIGH / LOW を選ぶ番
+        case playerGuessing
+        /// CPU が予想済みで、カードのオープン待ち
+        case cpuGuessed
+        /// ラウンドの結果表示中
+        case roundResult
+        /// 全ラウンド終了
+        case gameOver
+    }
+
+    static let handSize = 26
+    static var totalRounds: Int { handSize }
+
+    @Published private(set) var phase: Phase = .notStarted
+    @Published private(set) var difficulty: Difficulty = .normal
+    @Published private(set) var player = Player(name: "あなた")
+    @Published private(set) var cpu = Player(name: "CPU")
+    @Published private(set) var playerCard: Card?
+    @Published private(set) var cpuCard: Card?
+    @Published private(set) var isPlayerTurn = true
+    @Published private(set) var guess: Guess?
+    /// 予想した側が当たったかどうか（結果表示中のみ値を持つ）
+    @Published private(set) var guessWasCorrect: Bool?
+    @Published private(set) var round = 0
+    /// 公開済み（勝負が終わった）カード
+    @Published private(set) var knownCards = Set<Card>()
+    /// ユーザーの連続正解数
+    @Published private(set) var streak = 0
+    @Published private(set) var bestStreak = 0
+
+    private let recordStore: RecordStore
+    private let adManager: InterstitialAdManager
+
+    init(recordStore: RecordStore = RecordStore(), adManager: InterstitialAdManager = InterstitialAdManager()) {
+        self.recordStore = recordStore
+        self.adManager = adManager
+    }
+
+    // MARK: - 表示用
+
+    var isRevealed: Bool { phase == .roundResult || phase == .gameOver }
+
+    /// 自分の番のときは自分のカードが裏向き、相手の番のときは相手のカードが裏向き
+    var isPlayerCardFaceUp: Bool { !isPlayerTurn || isRevealed }
+    var isCpuCardFaceUp: Bool { isPlayerTurn || isRevealed }
+
+    var isLastRound: Bool { player.hand.isEmpty && cpu.hand.isEmpty }
+
+    var statusText: String {
+        switch phase {
+        case .notStarted: return "ゲームを開始します"
+        case .playerGuessing: return "あなたの番：HIGH か LOW か？"
+        case .cpuGuessed: return "CPUの番：予想が決まりました"
+        case .roundResult:
+            let guesser = isPlayerTurn ? "あなた" : "CPU"
+            return guessWasCorrect == true ? "\(guesser)が \(Player.pointsPerWin) ポイント獲得！" : "\(guesser)の予想はハズレ"
+        case .gameOver: return "ゲーム終了"
         }
     }
-    @Published private(set) var cpuPlayer: Player {
-        didSet {
-            updateCardsRemaining()
-        }
-    }
-    @Published var currentCard: Card?
-    @Published var cpuCard: Card?
-    @Published var gameStatus: String = ""
-    @Published var isPlayerTurn: Bool = Bool.random()
-    @Published var currentCardIsFaceUp: Bool = false
-    @Published var cpuGuessHigh: Bool = false
-    @Published var playerChoice: String?
-    @Published var result: Bool?
-    @Published private(set) var playedCards = Set<Card>()
-    var difficulty: Difficulty = .normal
-    private var interstitial: GADInterstitialAd?
 
-    init() {
-        self.currentPlayer = Player(name: "あなた")
-        self.cpuPlayer = Player(name: "CPU")
-        self.deck.shuffle()
-        self.gameStatus = "ゲームを開始します"
-        loadInterstitialAd()
+    var outcome: GameOutcome {
+        if player.score > cpu.score { return .win }
+        if player.score < cpu.score { return .loss }
+        return .draw
     }
-    
-    // MARK: - 共通
-    
-    // ゲーム開始時の処理
-    func startGame() {
-        // デッキをシャッフル、両プレイヤーにカードを配る
-        deck.shuffle()
-        currentPlayer.hand = deck.dealHand(size: 26)
-        cpuPlayer.hand = deck.dealHand(size: 26)
-        // ターン決め
+
+    // MARK: - ゲーム進行
+
+    func startGame(difficulty: Difficulty) {
+        self.difficulty = difficulty
+        var deck = Deck()
+        player = Player(name: player.name, hand: deck.deal(Self.handSize))
+        cpu = Player(name: cpu.name, hand: deck.deal(Self.handSize))
+        knownCards.removeAll()
+        streak = 0
+        bestStreak = 0
+        round = 1
         isPlayerTurn = Bool.random()
-        // 最初のカードを場に出す
-        dealInitialCards()
+        adManager.load()
+        beginRound()
     }
-    
-    // カードを場に出す
-    func dealInitialCards() {
+
+    func restart() {
+        startGame(difficulty: difficulty)
+    }
+
+    /// ゲームを途中でやめる（戦績には記録しない）
+    func quit() {
+        phase = .notStarted
+    }
+
+    /// ユーザーの予想
+    func submitGuess(_ guess: Guess) {
+        guard phase == .playerGuessing, let playerCard, let cpuCard else { return }
+        self.guess = guess
+        let correct = guess.isCorrect(card: playerCard, against: cpuCard)
+        if correct {
+            player.winRound()
+            streak += 1
+            bestStreak = max(bestStreak, streak)
+        } else {
+            streak = 0
+        }
+        reveal(correct: correct)
+    }
+
+    /// CPUの番でカードをオープンする
+    func revealCpuCard() {
+        guard phase == .cpuGuessed, let guess, let playerCard, let cpuCard else { return }
+        let correct = guess.isCorrect(card: cpuCard, against: playerCard)
+        if correct { cpu.winRound() }
+        reveal(correct: correct)
+    }
+
+    func nextRound() {
+        guard phase == .roundResult else { return }
+        if isLastRound {
+            finishGame()
+        } else {
+            round += 1
+            isPlayerTurn.toggle()
+            beginRound()
+        }
+    }
+
+    // MARK: - Private
+
+    private func beginRound() {
+        playerCard = player.playCard()
+        cpuCard = cpu.playCard()
+        guess = nil
+        guessWasCorrect = nil
+
         if isPlayerTurn {
-            // ユーザーのターンの場合
-            currentCard = currentPlayer.playCard()
-            currentCard?.isFaceUp = false
-            cpuCard = cpuPlayer.playCard()
-            cpuCard?.isFaceUp = true
-        } else {
-            // CPUのターンの場合
-            cpuCard = cpuPlayer.playCard()
-            cpuCard?.isFaceUp = false
-            currentCard = currentPlayer.playCard()
-            currentCard?.isFaceUp = true
-        }
-    }
-    
-    // ターン交代
-    func changeTurn() {
-        if isPlayerTurn {
-            isPlayerTurn = false
-            gameStatus = "CPUの番"
-        } else {
-            isPlayerTurn = true
-            gameStatus = "あなたの番"
-        }
-        if let card = currentCard {
-             playedCards.insert(card)
-         }
-         if let card = cpuCard {
-             playedCards.insert(card)
-         }
-        playerChoice = nil
-        result = nil
-    }
-    
-    // 残りカード枚数の計算
-    private func updateCardsRemaining() {
-        DispatchQueue.main.async {
-            self.objectWillChange.send()
+            phase = .playerGuessing
+        } else if let playerCard {
+            guess = CPUStrategy(difficulty: difficulty).guess(against: playerCard, knownCards: knownCards)
+            phase = .cpuGuessed
         }
     }
 
-    // カードを表向きにする
-    private func flipCard() {
-        if isPlayerTurn {
-            currentCardIsFaceUp = true
-            currentCard?.isFaceUp = true
-        } else {
-            cpuCard?.isFaceUp = true
-        }
-    }
-    
-    // ゲームのリセット
-    func resetGame() {
-        // デッキをリセット
-        deck.reset()
-        deck.shuffle()
-        // プレイヤーの手札と勝ちカードをクリア
-        currentPlayer.reset()
-        cpuPlayer.reset()
-        // カードの状態をリセット
-        currentCard = nil
-        cpuCard = nil
-        // ゲームの状態をリセット
-        gameStatus = "ゲームを開始します"
-        isPlayerTurn = Bool.random()
-        currentCardIsFaceUp = false
-        cpuGuessHigh = false
-        playerChoice = nil
-        result = nil
-        // プレイ済みのカードをクリア
-        playedCards.removeAll()
-        // 広告を再ロード
-        loadInterstitialAd()
-    }
-    
-    // MARK: - ユーザ用
-    
-    // "HIGH" 選択時の処理
-    func guessHigh() {
-        guard let humanCard = currentCard, let cpuCard = cpuCard else { return }
-        playerChoice = "HIGH"
-        flipCard()
-
-        if humanCard.rank.rawValue > cpuCard.rank.rawValue ||
-           (humanCard.rank == cpuCard.rank && humanCard.suit > cpuCard.suit) {
-            result = true
-            currentPlayer.winCards()
-        } else {
-            result = false
-        }
+    private func reveal(correct: Bool) {
+        guessWasCorrect = correct
+        [playerCard, cpuCard].compactMap { $0 }.forEach { knownCards.insert($0) }
+        phase = .roundResult
     }
 
-    // "LOW" 選択時の処理
-    func guessLow() {
-        guard let humanCard = currentCard, let cpuCard = cpuCard else { return }
-        playerChoice = "LOW"
-        flipCard()
-
-        if humanCard.rank < cpuCard.rank ||
-           (humanCard.rank == cpuCard.rank && humanCard.suit < cpuCard.suit) {
-            result = true
-            currentPlayer.winCards()
-        } else {
-            result = false
-        }
+    private func finishGame() {
+        phase = .gameOver
+        recordStore.save(outcome: outcome, score: player.score, bestStreak: bestStreak, difficulty: difficulty)
+        adManager.showIfReady()
     }
-    
-    // 戦績の更新
-    func updateRecords() {
-        let defaults = UserDefaults.standard
-        let resultKey: String
-        let difficultyKeyPrefix: String
-        let userScore = currentPlayer.cardsWon
-        let cpuScore = cpuPlayer.cardsWon
-        
-        // 難易度に基づいたキー接頭辞を決定
-        switch difficulty {
-        case .easy:
-            difficultyKeyPrefix = "Easy"
-        case .normal:
-            difficultyKeyPrefix = "Normal"
-        case .hard:
-            difficultyKeyPrefix = "Hard"
-        }
-        
-        // 勝敗に基づいたキーを決定
-        if userScore > cpuScore {
-            resultKey = "wins\(difficultyKeyPrefix)"
-        } else if userScore < cpuScore {
-            resultKey = "losses\(difficultyKeyPrefix)"
-        } else {
-            resultKey = "draws\(difficultyKeyPrefix)"
-        }
-        
-        // 戦績を更新
-        let currentCount = defaults.integer(forKey: resultKey)
-        defaults.set(currentCount + 1, forKey: resultKey)
-    }
-
-    
-    // MARK: - CPU用
-    
-    // CPUがターンをプレイする
-    func playCpuTurn() {
-        cpuGuessHigh = makeCpuGuess()
-        playerChoice = cpuGuessHigh ? "HIGH" : "LOW"
-    }
-    
-    // 難易度別のロジック
-    private func makeCpuGuess() -> Bool {
-        switch difficulty {
-        case .easy:
-            // 簡単な難易度では完全にランダム
-            return Bool.random()
-        case .normal:
-            // 普通の難易度では、場のカードを考慮するなどの簡単なロジック
-            return guessWithSomeLogic()
-        case .hard:
-            // 難しい難易度では、より複雑なロジックや過去のターンから学習する
-            return guessWithAdvancedLogic()
-        }
-    }
-    
-    // 普通の難易度のロジック
-    private func guessWithSomeLogic() -> Bool {
-        // ランクごとに確率調整
-        let probabilities: [Rank: Double] = [
-            .ace: 0.8,
-            .two: 0.75,
-            .three: 0.7,
-            .four: 0.65,
-            .five: 0.6,
-            .six: 0.55,
-            .seven: 0.5,
-            .eight: 0.45,
-            .nine: 0.4,
-            .ten: 0.35,
-            .jack: 0.3,
-            .queen: 0.25,
-            .king: 0.2
-        ]
-        // ユーザーの場のカード（currentCard）のランクを取得
-        if let currentRank = currentCard?.rank {
-            // 確率を取得（デフォルトは0.5）
-            let probability = probabilities[currentRank] ?? 0.5
-
-            // 乱数を生成して確率によりハイかローを決定
-            return Double.random(in: 0...1) < probability
-        }
-        
-        return Bool.random()
-    }
-    
-    // 難しい難易度のロジック
-    private func guessWithAdvancedLogic() -> Bool {
-        guard let currentCard = currentCard else { return Bool.random() }
-        let remainingHighCards = calculateRemainingHighCards(for: currentCard)
-        let totalRemainingCards = 52 - playedCards.count
-        let highCardProbability = Double(remainingHighCards) / Double(totalRemainingCards)
-
-        // ハイカードの確率が50%より高い場合、trueを返す
-        return Double.random(in: 0...1) < highCardProbability
-    }
-
-    // 残りのハイカードの数を計算
-    private func calculateRemainingHighCards(for currentCard: Card) -> Int {
-        let totalHigh = (13 - currentCard.rank.value) * 4 + currentCard.suit.index
-        let alreadyPlayedHigh = playedCards.filter { card in
-            card.rank > currentCard.rank || (card.rank == currentCard.rank && card.suit > currentCard.suit)
-        }.count
-        return totalHigh - alreadyPlayedHigh
-    }
-    
-    // CPUのターンの結果
-    func judgeCpuTurn() {
-        guard let humanCard = currentCard else { return }
-
-        flipCard()
-
-        if cpuGuessHigh {
-            if cpuCard!.rank.rawValue > humanCard.rank.rawValue || (cpuCard!.rank == humanCard.rank && cpuCard!.suit > humanCard.suit) {
-                result = true
-                cpuPlayer.winCards()
-            } else {
-                result = false
-            }
-        } else {
-            if cpuCard!.rank < humanCard.rank || (cpuCard!.rank == humanCard.rank && cpuCard!.suit < humanCard.suit) {
-                result = true
-                cpuPlayer.winCards()
-            } else {
-                result = false
-            }
-        }
-    }
-    
-    // MARK: - 広告
-    // インタースティシャル広告をロードする
-    func loadInterstitialAd() {
-        let adUnitID: String
-        if let adUnitIDFromPlist = Bundle.main.infoDictionary?["AdInterstitialUnitID"] as? String {
-            adUnitID = adUnitIDFromPlist
-        } else {
-            fatalError("AdUnitID not found in Info.plist")
-        }
-        
-        let request = GADRequest()
-        GADInterstitialAd.load(withAdUnitID: adUnitID, request: request) { [weak self] ad, error in
-            if let error = error {
-                print("Failed to load interstitial ad with error: \(error.localizedDescription)")
-                return
-            }
-            self?.interstitial = ad
-        }
-    }
-
-    // インタースティシャル広告を表示する
-    func showInterstitialAd(from root: UIViewController) {
-        if let interstitial = interstitial {
-            interstitial.present(fromRootViewController: root)
-        } else {
-            print("Ad wasn't ready")
-            loadInterstitialAd()  // 広告がなかった場合、再度ロードを試みる
-        }
-    }
-}
-
-enum Difficulty {
-    case easy, normal, hard
 }

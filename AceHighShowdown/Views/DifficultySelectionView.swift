@@ -3,62 +3,82 @@
 import SwiftUI
 
 struct DifficultySelectionView: View {
-    @Binding var isGameActive: Bool
-    @ObservedObject var viewModel: GameViewModel
+    let onSelect: (Difficulty) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var records: [Difficulty: DifficultyRecord] = [:]
 
     var body: some View {
-        GeometryReader { geometry in
-            HStack {
-                Spacer()
-                VStack {
-                    Spacer()
-                    
-                    Text("難易度を選択してください")
-                        .font(.largeTitle)
-                        .padding()
-                    
-                    Button("EASY") {
-                        selectDifficulty(.easy)
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 14) {
+                    ForEach(Difficulty.allCases) { difficulty in
+                        Button {
+                            Haptics.tap()
+                            onSelect(difficulty)
+                        } label: {
+                            DifficultyRow(difficulty: difficulty, record: records[difficulty])
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(DifficultyButtonStyle(width: geometry.size.width * 0.8))
-                    
-                    Button("NORMAL") {
-                        selectDifficulty(.normal)
-                    }
-                    .buttonStyle(DifficultyButtonStyle(width: geometry.size.width * 0.8))
-                    
-                    Button("HARD") {
-                        selectDifficulty(.hard)
-                    }
-                    .buttonStyle(DifficultyButtonStyle(width: geometry.size.width * 0.8))
-                    
-                    Spacer()
                 }
-                Spacer()
+                .padding()
+            }
+            .navigationTitle("難易度を選択")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("キャンセル") { dismiss() }
+                }
             }
         }
-    }
-
-    // 難易度を選択したときの処理
-    func selectDifficulty(_ difficulty: Difficulty) {
-        viewModel.difficulty = difficulty
-        isGameActive = true
+        .onAppear {
+            let store = RecordStore()
+            records = Dictionary(uniqueKeysWithValues: Difficulty.allCases.map { ($0, store.record(for: $0)) })
+        }
     }
 }
 
-// 難易度選択ボタンのスタイル定義
-struct DifficultyButtonStyle: ButtonStyle {
-    var width: CGFloat
-    
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundColor(.white)
-            .padding()
-            .frame(width: width)
-            .contentShape(Rectangle())
-            .background(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.purple]), startPoint: .leading, endPoint: .trailing))
-            .cornerRadius(15)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .padding()
+private struct DifficultyRow: View {
+    let difficulty: Difficulty
+    let record: DifficultyRecord?
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: difficulty.iconName)
+                .font(.title2)
+                .frame(width: 44, height: 44)
+                .background(Color.white.opacity(0.2), in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(difficulty.title)
+                    .font(.headline)
+                Text(difficulty.description)
+                    .font(.subheadline)
+                    .opacity(0.9)
+                if let record, record.total > 0 {
+                    Text("\(record.wins)勝 \(record.losses)敗 \(record.draws)分")
+                        .font(.caption.monospacedDigit())
+                        .opacity(0.8)
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .opacity(0.7)
+        }
+        .foregroundColor(.white)
+        .padding()
+        .background(gradient, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .contentShape(Rectangle())
+    }
+
+    private var gradient: LinearGradient {
+        let colors: [Color]
+        switch difficulty {
+        case .easy: colors = [.green, .teal]
+        case .normal: colors = [.blue, .purple]
+        case .hard: colors = [.orange, .red]
+        }
+        return LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
     }
 }

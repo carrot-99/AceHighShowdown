@@ -3,46 +3,44 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var viewModel = GameViewModel()
-    @State private var isShowingTerms = true
-    @State private var hasAgreedToTerms = UserDefaults.standard.bool(forKey: "hasAgreedToTerms")
-    @State private var isGameActive = false
-    
-    init() {
-        let viewModel = GameViewModel()
-        _viewModel = ObservedObject(wrappedValue: viewModel)
-    }
-    
+    @StateObject private var viewModel = GameViewModel()
+    @AppStorage(StorageKeys.hasAgreedToTerms) private var hasAgreedToTerms = false
+
     var body: some View {
-        if hasAgreedToTerms {
-            if isGameActive {
-                NavigationView {
-                    GameView(viewModel: viewModel, isGameActive: $isGameActive)
-                        .overlay(
-                            VStack {
-                                Spacer()
-                                AdMobBannerView()
-                                    .frame(width: UIScreen.main.bounds.width, height: 50)
-                                    .background(Color.gray.opacity(0.1))
-                            },
-                            alignment: .bottom
-                        )
-                }
-                .navigationViewStyle(StackNavigationViewStyle())
+        Group {
+            if !hasAgreedToTerms {
+                TermsAndPrivacyAgreementView()
             } else {
-                TitleView(isGameActive: $isGameActive, viewModel: viewModel)
-                    .overlay(
-                        VStack {
-                            Spacer()
-                            AdMobBannerView()
-                                .frame(width: UIScreen.main.bounds.width, height: 50)
-                                .background(Color.gray.opacity(0.1))
-                        },
-                        alignment: .bottom
-                    )
+                gameScreens
+                    .bannerAd()
             }
-        } else {
-            TermsAndPrivacyAgreementView(isShowingTerms: $isShowingTerms, hasAgreedToTerms: $hasAgreedToTerms)
+        }
+        .animation(.easeInOut(duration: 0.3), value: screenID)
+    }
+
+    @ViewBuilder
+    private var gameScreens: some View {
+        switch viewModel.phase {
+        case .notStarted:
+            TitleView(viewModel: viewModel)
+                .onAppear(perform: TrackingPermission.requestIfNeeded)
+                .transition(.opacity)
+        case .gameOver:
+            ResultView(viewModel: viewModel)
+                .transition(.opacity)
+        default:
+            GameView(viewModel: viewModel)
+                .transition(.opacity)
+        }
+    }
+
+    /// 画面切り替えアニメーションのトリガー
+    private var screenID: Int {
+        guard hasAgreedToTerms else { return 0 }
+        switch viewModel.phase {
+        case .notStarted: return 1
+        case .gameOver: return 3
+        default: return 2
         }
     }
 }

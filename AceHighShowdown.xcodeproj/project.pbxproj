@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1C0DE000000000000000003 /* PlayedCardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE000000000000000013 /* PlayedCardsView.swift */; };
+		A1C0DE000000000000000002 /* AdManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE000000000000000012 /* AdManager.swift */; };
+		A1C0DE000000000000000001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE000000000000000011 /* Theme.swift */; };
 		16E9A7284B8907851900AD45 /* Pods_AceHighShowdown.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D95EDE94964165E0E7696418 /* Pods_AceHighShowdown.framework */; };
 		CEA745372B3E5EF200DFA3CF /* AceHighShowdownApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745362B3E5EF200DFA3CF /* AceHighShowdownApp.swift */; };
 		CEA745392B3E5EF200DFA3CF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745382B3E5EF200DFA3CF /* ContentView.swift */; };
@@ -19,7 +22,7 @@
 		CEA7454F2B3E628200DFA3CF /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA7454E2B3E628200DFA3CF /* CardView.swift */; };
 		CEA745512B3E633900DFA3CF /* ScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745502B3E633900DFA3CF /* ScoreView.swift */; };
 		CEA745542B3E637300DFA3CF /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745532B3E637300DFA3CF /* GameViewModel.swift */; };
-		CEA745572B3E638C00DFA3CF /* PlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745562B3E638C00DFA3CF /* PlayerViewModel.swift */; };
+		CEA745572B3E638C00DFA3CF /* CPUStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745562B3E638C00DFA3CF /* CPUStrategy.swift */; };
 		CEA745612B3E64A400DFA3CF /* TitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745602B3E64A400DFA3CF /* TitleView.swift */; };
 		CEA745642B3E6E3B00DFA3CF /* AdMobBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745632B3E6E3B00DFA3CF /* AdMobBannerView.swift */; };
 		CEA745942B3FEEBF00DFA3CF /* ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745932B3FEEBF00DFA3CF /* ResultView.swift */; };
@@ -30,11 +33,14 @@
 		CEA7459F2B4013DF00DFA3CF /* GameStatusBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA7459E2B4013DF00DFA3CF /* GameStatusBarView.swift */; };
 		CEA745A12B40143D00DFA3CF /* ChoiceResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745A02B40143D00DFA3CF /* ChoiceResultView.swift */; };
 		CEA745A42B4047B400DFA3CF /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745A32B4047B400DFA3CF /* SettingsView.swift */; };
-		CEA745A62B40550B00DFA3CF /* Keys.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745A52B40550B00DFA3CF /* Keys.swift */; };
+		CEA745A62B40550B00DFA3CF /* RecordStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745A52B40550B00DFA3CF /* RecordStore.swift */; };
 		CEA745A92B40562800DFA3CF /* RecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA745A82B40562800DFA3CF /* RecordView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A1C0DE000000000000000013 /* PlayedCardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayedCardsView.swift; sourceTree = "<group>"; };
+		A1C0DE000000000000000012 /* AdManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdManager.swift; sourceTree = "<group>"; };
+		A1C0DE000000000000000011 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		0EED60BA49A6EB12F432C0F1 /* Pods-AceHighShowdown.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AceHighShowdown.release.xcconfig"; path = "Target Support Files/Pods-AceHighShowdown/Pods-AceHighShowdown.release.xcconfig"; sourceTree = "<group>"; };
 		9A4566FB52D3F09DF2026E69 /* Pods-AceHighShowdown.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AceHighShowdown.debug.xcconfig"; path = "Target Support Files/Pods-AceHighShowdown/Pods-AceHighShowdown.debug.xcconfig"; sourceTree = "<group>"; };
 		CEA745332B3E5EF200DFA3CF /* AceHighShowdown.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AceHighShowdown.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -49,7 +55,7 @@
 		CEA7454E2B3E628200DFA3CF /* CardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardView.swift; sourceTree = "<group>"; };
 		CEA745502B3E633900DFA3CF /* ScoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreView.swift; sourceTree = "<group>"; };
 		CEA745532B3E637300DFA3CF /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
-		CEA745562B3E638C00DFA3CF /* PlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerViewModel.swift; sourceTree = "<group>"; };
+		CEA745562B3E638C00DFA3CF /* CPUStrategy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CPUStrategy.swift; sourceTree = "<group>"; };
 		CEA745602B3E64A400DFA3CF /* TitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleView.swift; sourceTree = "<group>"; };
 		CEA745632B3E6E3B00DFA3CF /* AdMobBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobBannerView.swift; sourceTree = "<group>"; };
 		CEA745652B3E707C00DFA3CF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -61,7 +67,7 @@
 		CEA7459E2B4013DF00DFA3CF /* GameStatusBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStatusBarView.swift; sourceTree = "<group>"; };
 		CEA745A02B40143D00DFA3CF /* ChoiceResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceResultView.swift; sourceTree = "<group>"; };
 		CEA745A32B4047B400DFA3CF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		CEA745A52B40550B00DFA3CF /* Keys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keys.swift; sourceTree = "<group>"; };
+		CEA745A52B40550B00DFA3CF /* RecordStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordStore.swift; sourceTree = "<group>"; };
 		CEA745A82B40562800DFA3CF /* RecordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordView.swift; sourceTree = "<group>"; };
 		D95EDE94964165E0E7696418 /* Pods_AceHighShowdown.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_AceHighShowdown.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -157,7 +163,7 @@
 			isa = PBXGroup;
 			children = (
 				CEA745532B3E637300DFA3CF /* GameViewModel.swift */,
-				CEA745562B3E638C00DFA3CF /* PlayerViewModel.swift */,
+				CEA745562B3E638C00DFA3CF /* CPUStrategy.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -189,6 +195,7 @@
 				CEA7454E2B3E628200DFA3CF /* CardView.swift */,
 				CEA7459E2B4013DF00DFA3CF /* GameStatusBarView.swift */,
 				CEA745A02B40143D00DFA3CF /* ChoiceResultView.swift */,
+				A1C0DE000000000000000013 /* PlayedCardsView.swift */,
 			);
 			path = ViewComponents;
 			sourceTree = "<group>";
@@ -196,7 +203,9 @@
 		CEA745A72B40550F00DFA3CF /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
-				CEA745A52B40550B00DFA3CF /* Keys.swift */,
+				CEA745A52B40550B00DFA3CF /* RecordStore.swift */,
+				A1C0DE000000000000000012 /* AdManager.swift */,
+				A1C0DE000000000000000011 /* Theme.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -324,11 +333,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				CEA745542B3E637300DFA3CF /* GameViewModel.swift in Sources */,
-				CEA745572B3E638C00DFA3CF /* PlayerViewModel.swift in Sources */,
+				CEA745572B3E638C00DFA3CF /* CPUStrategy.swift in Sources */,
 				CEA745612B3E64A400DFA3CF /* TitleView.swift in Sources */,
 				CEA745A92B40562800DFA3CF /* RecordView.swift in Sources */,
 				CEA745982B3FF11000DFA3CF /* PrivacyPolicyView.swift in Sources */,
-				CEA745A62B40550B00DFA3CF /* Keys.swift in Sources */,
+				A1C0DE000000000000000001 /* Theme.swift in Sources */,
+				A1C0DE000000000000000002 /* AdManager.swift in Sources */,
+				A1C0DE000000000000000003 /* PlayedCardsView.swift in Sources */,
+				CEA745A62B40550B00DFA3CF /* RecordStore.swift in Sources */,
 				CEA7459D2B3FFBA900DFA3CF /* DifficultySelectionView.swift in Sources */,
 				CEA745A42B4047B400DFA3CF /* SettingsView.swift in Sources */,
 				CEA7454F2B3E628200DFA3CF /* CardView.swift in Sources */,

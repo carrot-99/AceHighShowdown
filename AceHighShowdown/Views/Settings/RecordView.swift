@@ -3,68 +3,56 @@
 import SwiftUI
 
 struct RecordView: View {
-    var body: some View {
-        let defaults = UserDefaults.standard
-        let winsEasy = defaults.integer(forKey: Keys.winsEasy)
-        let lossesEasy = defaults.integer(forKey: Keys.lossesEasy)
-        let drawsEasy = defaults.integer(forKey: Keys.drawsEasy)
-        let winsNormal = defaults.integer(forKey: Keys.winsNormal)
-        let lossesNormal = defaults.integer(forKey: Keys.lossesNormal)
-        let drawsNormal = defaults.integer(forKey: Keys.drawsNormal)
-        let winsHard = defaults.integer(forKey: Keys.winsHard)
-        let lossesHard = defaults.integer(forKey: Keys.lossesHard)
-        let drawsHard = defaults.integer(forKey: Keys.drawsHard)
-        
-        VStack(alignment: .leading, spacing: 10) {
-            Text("戦績")
-                .font(.title)
-                .bold()
-            
-            Divider()
-            
-            HStack {
-                Text("難易度")
-                    .font(.headline)
-                    .frame(width: 100, alignment: .leading)
-                Spacer()
-                Text("勝利")
-                    .font(.headline)
-                Spacer()
-                Text("敗北")
-                    .font(.headline)
-                Spacer()
-                Text("引き分け")
-                    .font(.headline)
-            }
-            
-            RecordRow(difficulty: "Easy", wins: winsEasy, losses: lossesEasy, draws: drawsEasy)
-            RecordRow(difficulty: "Normal", wins: winsNormal, losses: lossesNormal, draws: drawsNormal)
-            RecordRow(difficulty: "Hard", wins: winsHard, losses: lossesHard, draws: drawsHard)
-        }
-        .padding()
-        .cornerRadius(10)
-        .shadow(radius: 5)
-        .padding(20)
-    }
-}
+    @State private var records: [(Difficulty, DifficultyRecord)] = []
 
-struct RecordRow: View {
-    var difficulty: String
-    var wins: Int
-    var losses: Int
-    var draws: Int
-    
     var body: some View {
-        HStack {
-            Text(difficulty)
-                .frame(width: 100, alignment: .leading)
-            Spacer()
-            Text("\(wins)")
-            Spacer()
-            Text("\(losses)")
-            Spacer()
-            Text("\(draws)")
+        List {
+            ForEach(records, id: \.0) { difficulty, record in
+                Section(difficulty.title) {
+                    if record.total == 0 {
+                        Text("まだ対戦していません")
+                            .foregroundColor(.secondary)
+                    } else {
+                        HStack {
+                            statColumn("勝利", record.wins, color: .green)
+                            statColumn("敗北", record.losses, color: .red)
+                            statColumn("引き分け", record.draws, color: .secondary)
+                        }
+                        row("勝率", record.winRate.map { String(format: "%.1f%%", $0 * 100) } ?? "-")
+                        row("対戦数", "\(record.total)")
+                        row("最高スコア", "\(record.bestScore)")
+                        row("最大連続正解", "\(record.bestStreak)")
+                    }
+                }
+            }
         }
-        .padding(.vertical, 2)
+        .navigationTitle("戦績")
+        .onAppear {
+            let store = RecordStore()
+            records = Difficulty.allCases.map { ($0, store.record(for: $0)) }
+        }
+    }
+
+    private func statColumn(_ title: String, _ value: Int, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("\(value)")
+                .font(.title2.bold().monospacedDigit())
+                .foregroundColor(color)
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func row(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(value)
+                .monospacedDigit()
+                .foregroundColor(.secondary)
+        }
     }
 }

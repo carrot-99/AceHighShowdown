@@ -2,89 +2,93 @@
 
 import Foundation
 
-enum Suit: String, CaseIterable {
-    case clubs = "Clubs"
-    case diamonds = "Diamonds"
-    case hearts = "Hearts"
-    case spades = "Spades"
-    
-    var index: Int {
+/// スートの強さは ♣ < ♦ < ♥ < ♠ の順
+enum Suit: Int, CaseIterable, Comparable {
+    case clubs = 1
+    case diamonds
+    case hearts
+    case spades
+
+    /// 画像アセット名に使うプレフィックス
+    var assetName: String {
         switch self {
-        case .clubs:
-            return 1
-        case .diamonds:
-            return 2
-        case .hearts:
-            return 3
-        case .spades:
-            return 4
+        case .clubs: return "Clubs"
+        case .diamonds: return "Diamonds"
+        case .hearts: return "Hearts"
+        case .spades: return "Spades"
         }
+    }
+
+    var symbol: String {
+        switch self {
+        case .clubs: return "♣"
+        case .diamonds: return "♦"
+        case .hearts: return "♥"
+        case .spades: return "♠"
+        }
+    }
+
+    var isRed: Bool { self == .diamonds || self == .hearts }
+
+    static func < (lhs: Suit, rhs: Suit) -> Bool {
+        lhs.rawValue < rhs.rawValue
     }
 }
 
-enum Rank: Int, CaseIterable {
+/// ランクの強さは A(最弱) < 2 < … < K(最強)
+enum Rank: Int, CaseIterable, Comparable {
     case ace = 1
-    case two = 2, three, four, five, six, seven, eight, nine, ten
-    case jack = 11
-    case queen = 12
-    case king = 13
-    
-    var value: Int {
-        return self.rawValue
-    }
-    
+    case two, three, four, five, six, seven, eight, nine, ten
+    case jack, queen, king
+
     var displayName: String {
         switch self {
         case .ace: return "A"
         case .jack: return "J"
         case .queen: return "Q"
         case .king: return "K"
-        default: return String(self.rawValue)
+        default: return String(rawValue)
         }
     }
-}
 
-struct Card: Identifiable, Hashable {
-    var id = UUID()
-    var rank: Rank
-    var suit: Suit
-    var isFaceUp: Bool = false
-    
-    var imageName: String {
-        return "\(suit.rawValue)\(rank.displayName)"
-    }
-
-    static func == (lhs: Card, rhs: Card) -> Bool {
-        return lhs.rank == rhs.rank && lhs.suit == rhs.suit
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(rank)
-        hasher.combine(suit)
-    }
-}
-
-extension Rank: Comparable {
     static func < (lhs: Rank, rhs: Rank) -> Bool {
-        switch (lhs, rhs) {
-        case (.ace, .ace): return false  // A vs A: 同等
-        case (.ace, _): return true     // A vs 他: A は常に弱い
-        case (_, .ace): return false    // 他 vs A: A は常に弱い
-        default: return lhs.rawValue < rhs.rawValue  // 他のカードの比較
-        }
-    }
-    
-    static func == (lhs: Rank, rhs: Rank) -> Bool {
-        return lhs.rawValue == rhs.rawValue
+        lhs.rawValue < rhs.rawValue
     }
 }
 
-extension Suit: Comparable {
-    static func < (lhs: Suit, rhs: Suit) -> Bool {
-        return lhs.index < rhs.index
+struct Card: Hashable, Identifiable, Comparable {
+    let rank: Rank
+    let suit: Suit
+
+    var id: String { imageName }
+
+    var imageName: String { "\(suit.assetName)\(rank.displayName)" }
+
+    /// 例: "♠K"
+    var shortName: String { "\(suit.symbol)\(rank.displayName)" }
+
+    /// ランク → スートの順で比較する（同一カードは存在しないため引き分けはない）
+    static func < (lhs: Card, rhs: Card) -> Bool {
+        if lhs.rank != rhs.rank { return lhs.rank < rhs.rank }
+        return lhs.suit < rhs.suit
     }
-    
-    static func == (lhs: Suit, rhs: Suit) -> Bool {
-        return lhs.index == rhs.index
+
+    /// 52枚すべてのカード
+    static let allCards: [Card] = Suit.allCases.flatMap { suit in
+        Rank.allCases.map { Card(rank: $0, suit: suit) }
+    }
+}
+
+/// HIGH / LOW の予想
+enum Guess: String {
+    case high = "HIGH"
+    case low = "LOW"
+
+    /// `card` が `opponent` に対してこの予想どおりかどうか
+    func isCorrect(card: Card, against opponent: Card) -> Bool {
+        switch self {
+        case .high: return card > opponent
+        case .low: return card < opponent
+        }
     }
 }
