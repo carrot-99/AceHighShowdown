@@ -4,40 +4,28 @@ import SwiftUI
 import GoogleMobileAds
 
 struct AdMobBannerView: UIViewRepresentable {
-    let adUnitID: String
-    
-    init() {
-        if let adUnitID = Bundle.main.infoDictionary?["AdBannerUnitID"] as? String {
-            self.adUnitID = adUnitID
-        } else {
-            fatalError("AdUnitID not found in Info dictionary")
-        }
-    }
-    
     func makeUIView(context: Context) -> GADBannerView {
-        let banner = GADBannerView(adSize: getAdSize())
-        banner.adUnitID = self.adUnitID
+        let width = UIApplication.shared.activeKeyWindow?.bounds.width ?? UIScreen.main.bounds.width
+        let banner = GADBannerView(adSize: GADCurrentOrientationAnchoredAdaptiveBannerAdSizeWithWidth(width))
+        guard let unitID = AdConfig.bannerUnitID else { return banner }
 
-        let request = GADRequest()
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            request.scene = windowScene
-            banner.rootViewController = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController
-        }
-
-        banner.load(request)
+        banner.adUnitID = unitID
+        banner.rootViewController = UIApplication.shared.topViewController
+        banner.load(GADRequest())
         return banner
     }
 
-    func updateUIView(_ uiView: GADBannerView, context: Context) {
-        // バナー広告のビューを更新する必要がある場合に実装
-    }
-    
-    private func getAdSize() -> GADAdSize {
-        // 画面の幅に基づいて適切な広告サイズを取得
-        let frame = UIScreen.main.bounds
-        let viewWidth = frame.size.width
+    func updateUIView(_ uiView: GADBannerView, context: Context) {}
+}
 
-        // 画面の向きに応じた適切な広告サイズを返す
-        return GADCurrentOrientationAnchoredAdaptiveBannerAdSizeWithWidth(viewWidth)
+extension View {
+    /// 画面下部にバナー広告を表示する（コンテンツと重ならないよう safe area として確保）
+    func bannerAd() -> some View {
+        safeAreaInset(edge: .bottom, spacing: 0) {
+            AdMobBannerView()
+                .frame(height: 50)
+                .frame(maxWidth: .infinity)
+                .background(.ultraThinMaterial)
+        }
     }
 }

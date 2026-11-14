@@ -3,43 +3,73 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(\.presentationMode) var presentationMode
-    @State private var showingRecord = false
-    @State private var showingTerms = false
-    @State private var showingPrivacyPolicy = false
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage(StorageKeys.hapticsEnabled) private var hapticsEnabled = true
+    @State private var showingResetConfirmation = false
 
     var body: some View {
         NavigationView {
-            VStack {
-                Form {
-                    Section() {
-                        Button("戦績") {
-                            showingRecord = true
-                        }
-                        .sheet(isPresented: $showingRecord) {
-                            RecordView()
-                        }
-                        
-                        Button("利用規約") {
-                            showingTerms = true
-                        }
-                        .sheet(isPresented: $showingTerms) {
-                            TermsView()
-                        }
-                        
-                        Button("プライバシーポリシー") {
-                            showingPrivacyPolicy = true
-                        }
-                        .sheet(isPresented: $showingPrivacyPolicy) {
-                            PrivacyPolicyView()
-                        }
+            Form {
+                Section("ゲーム") {
+                    Toggle(isOn: $hapticsEnabled) {
+                        Label("触覚フィードバック", systemImage: "iphone.radiowaves.left.and.right")
                     }
                 }
-                .navigationBarTitle("Settings")
-                .navigationBarItems(trailing: Button("閉じる") {
-                    presentationMode.wrappedValue.dismiss()
-                })
+
+                Section("戦績") {
+                    NavigationLink {
+                        RecordView()
+                    } label: {
+                        Label("戦績を見る", systemImage: "chart.bar.fill")
+                    }
+                    Button(role: .destructive) {
+                        showingResetConfirmation = true
+                    } label: {
+                        Label("戦績をリセット", systemImage: "trash")
+                    }
+                }
+
+                Section("情報") {
+                    NavigationLink {
+                        TermsView().navigationTitle("利用規約")
+                    } label: {
+                        Label("利用規約", systemImage: "doc.text")
+                    }
+                    NavigationLink {
+                        PrivacyPolicyView().navigationTitle("プライバシーポリシー")
+                    } label: {
+                        Label("プライバシーポリシー", systemImage: "hand.raised")
+                    }
+                    HStack {
+                        Label("バージョン", systemImage: "info.circle")
+                        Spacer()
+                        Text(appVersion).foregroundColor(.secondary)
+                    }
+                }
+            }
+            .navigationTitle("設定")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("閉じる") { dismiss() }
+                }
+            }
+            .confirmationDialog("すべての戦績をリセットしますか？", isPresented: $showingResetConfirmation, titleVisibility: .visible) {
+                Button("リセット", role: .destructive) {
+                    RecordStore().resetAll()
+                    Haptics.notify(.warning)
+                }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                Text("この操作は取り消せません。")
             }
         }
+        .navigationViewStyle(.stack)
+    }
+
+    private var appVersion: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "-"
+        return "\(version) (\(build))"
     }
 }
